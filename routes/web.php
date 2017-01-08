@@ -11,9 +11,12 @@
 |
 */
 
-Route::get('/', function () {
-    return view('index');
-});
+// Route::get('/', function () {
+//     return view('index');
+// });
 
+Route::resource('/websites','WebsiteController');
+
+Route::get('/','RequestsMonitoring@home');
 Route::get('/requests','RequestsMonitoring@index');
 Route::post('/requests','RequestsMonitoring@store');
