@@ -8,7 +8,8 @@
         "php": ">=5.6.4",
         "ahmedash95/laravel-uptime-monitor": "^1.2",
         "hieu-le/laravel-dashboard": "^1.0",
-        "laravel/framework": "5.3.*"
+        "laravel/framework": "5.3.*",
+        "predis/predis": "^1.1"
     },
     "require-dev": {
         "fzaninotto/faker": "~1.4",
