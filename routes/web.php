@@ -14,9 +14,14 @@
 // Route::get('/', function () {
 //     return view('index');
 // });
+Auth::routes();
+Route::group(['middleware' => 'auth'], function () {
+	Route::resource('/websites','WebsiteController');
 
-Route::resource('/websites','WebsiteController');
+	Route::get('/','RequestsMonitoring@home');
+	Route::get('/requests','RequestsMonitoring@index');
+	Route::post('/requests','RequestsMonitoring@store');
 
-Route::get('/','RequestsMonitoring@home');
-Route::get('/requests','RequestsMonitoring@index');
-Route::post('/requests','RequestsMonitoring@store');
+
+	Route::get('/home', 'HomeController@index');
+});

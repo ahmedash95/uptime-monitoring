@@ -26,4 +26,9 @@ class User extends Authenticatable
     protected $hidden = [
         'password', 'remember_token',
     ];
+
+    public function routeNotificationForSlack()
+    {
+        return config('laravel-uptime-monitor.notifications.slack.webhook_url');
+    }
 }

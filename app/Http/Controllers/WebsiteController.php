@@ -15,7 +15,8 @@ class WebsiteController extends Controller
 
     	foreach ($websites as $website) {
     		$site['id'] = $website->id;
-    		$site['url'] = $website->url;
+            $site['url'] = $website->url;
+    		$site['name'] = $website->name;
     		$ch = curl_init($website->url); 
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
 			if(curl_exec($ch))
@@ -36,20 +37,30 @@ class WebsiteController extends Controller
 
     public function create()
     {
+
     	return view('websites.create');
     }
 
     public function store(Request $request)
     {
     	$this->validate($request,[
-	        'url' => 'required|unique:websites|url',
+            'url' => 'required|unique:websites',
+	        'name' => 'required',
         ]);
 
         $website = Website::create([
-        	'url' => $request->input('url')
+            'url' => $request->input('url'),
+        	'name' => $request->input('name')
         ]);
 
         return redirect('/websites');
+    }
+
+    public function show(Website $website)
+    {
+        $status = $website->status()->orderBy('created_at', 'dsc')->paginate(10);
+
+        return view('websites.show')->with('website', $website)->with('status', $status);
     }
 
     public function destroy(Website $website)
