@@ -47,8 +47,13 @@ class CheckWebsites extends Command
             $site['url'] = $website->url;
             $site['name'] = $website->name;
             $ch = curl_init($website->url); 
+            curl_setopt($ch, CURLOPT_HEADER, true);    // we want headers
+            curl_setopt($ch, CURLOPT_NOBODY, true);    // we don't need body
             curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
-            if(curl_exec($ch))
+            curl_setopt($ch, CURLOPT_TIMEOUT,10);
+            $output = curl_exec($ch);
+            $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if($httpcode == 200)
             {
             $info = curl_getinfo($ch);
                 $site['status'] = 'online';
