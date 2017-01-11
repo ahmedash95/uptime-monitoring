@@ -8,7 +8,7 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                    <th>Url</th>
+                                    <th>Name</th>
                                     <th>Status</th>
                                     <th>Response Time</th>
                                     <th>Option</th>
