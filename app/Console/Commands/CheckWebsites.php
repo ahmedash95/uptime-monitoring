@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use PDO;
 use App\User;
 use Exception;
 use App\Website;
@@ -50,49 +51,66 @@ class CheckWebsites extends Command
             $site['url'] = $website->url;
             $site['name'] = $website->name;
 
-            if ($website->type == 'website') {
-                $response = $this->checkWebsite($website->url);
-                if ($response) {
-                    $site['status'] = 'online';
-                    $site['response'] = $response;
-                } else {
-                    $site['status'] = 'down';
-                    $site['response'] = 0;
+            switch ($website->type) {
+                case 'website':
+                    $response = $this->checkWebsite($website->url);
+                    if ($response) {
+                        $site['status'] = 'online';
+                        $site['response'] = $response;
+                    } else {
+                        $site['status'] = 'down';
+                        $site['response'] = 0;
 
-                    $user = User::first();
-                    $user->notify(new ServerDown($site['name']));
-                }
-                
-            } else {
-                $response = $this->checkRedis($website->url);
-                if ($response) {
-                    $site['status'] = 'online';
-                    $site['response'] = 0;
-                } else {
-                    $site['status'] = 'down';
-                    $site['response'] = 0;
+                        $user = User::first();
+                        $user->notify(new ServerDown($site['name']));
+                    }
+                    break;
 
-                    $user = User::first();
-                    $user->notify(new ServerDown($site['name']));
-                }
+                case 'redis':
+                    $response = $this->checkRedis($website->url, $website->password);
+                    if ($response) {
+                        $site['status'] = 'online';
+                        $site['response'] = number_format($response, 3);
+                    } else {
+                        $site['status'] = 'down';
+                        $site['response'] = 0;
+
+                        $user = User::first();
+                        $user->notify(new ServerDown($site['name']));
+                    }
+                    break;
+
+                case 'mysql':
+                    $response = $this->checkMysql($website->url, $website->username, $website->password, $website->db_name, $website->table_name);
+                    if ($response) {
+                        $site['status'] = 'online';
+                        $site['response'] = number_format($response, 3);
+                    } else {
+                        $site['status'] = 'down';
+                        $site['response'] = 0;
+
+                        $user = User::first();
+                        $user->notify(new ServerDown($site['name']));
+                    }
+                    break;
             }
 
             $website->status()->create($site);
         }
     }
 
-        public function checkRedis($url)
+    public function checkRedis($url, $password)
     {
         try {
-            // $starttime = microtime(true);
+            $starttime = microtime(true);
 
-            $client = new Client($url);
+            $client = new Client($url .'?Auth='. $password);
             $client->set('foo', 'bar');
             $value = $client->get('foo');
-            return true;
 
-            // $endtime = microtime(true);
-            // $timediff = $endtime - $starttime;
+            $endtime = microtime(true);
+            $timediff = $endtime - $starttime;
+            return $timediff * 1000;
         } catch (Exception $e) {
             return false;
         }
@@ -116,5 +134,28 @@ class CheckWebsites extends Command
             return false;
         }
         
+    }
+
+    public function checkMysql($servername, $username, $password, $db_name, $table_name)
+    {
+        try {
+                $time = microtime(true);
+                $conn = new PDO("mysql:host=$servername;dbname=$db_name", $username, $password);
+                // set the PDO error mode to exception
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $stmt = $conn->prepare("SELECT id FROM $table_name limit 1"); 
+                $stmt->execute();
+
+                // set the resulting array to associative
+                $result = $stmt->setFetchMode(PDO::FETCH_ASSOC);
+                $diff = microtime(true)-$time;
+                $milliseconds =  $diff * 1000;
+                return $milliseconds;
+            }
+        catch(PDOException $e)
+            {
+                die($e->getMessage());
+                return false;
+            }
     }
 }

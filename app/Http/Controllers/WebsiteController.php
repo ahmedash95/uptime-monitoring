@@ -7,6 +7,7 @@ use Predis\Client;
 use Illuminate\Http\Request;
 use Predis\Connection\ConnectionException;
 use Exception;
+use PDO;
 
 class WebsiteController extends Controller
 {
@@ -21,26 +22,41 @@ class WebsiteController extends Controller
             $site['url'] = $website->url;
     		$site['name'] = $website->name;
 
-            if ($website->type == 'website') {
-                $response = $this->checkWebsite($website->url);
-                if ($response) {
-                    $site['status'] = 'online';
-                    $site['response'] = $response;
-                } else {
-                    $site['status'] = 'down';
-                    $site['response'] = 0;
-                }
-                
-            } else {
-                $response = $this->checkRedis($website->url);
-                if ($response) {
-                    $site['status'] = 'online';
-                    $site['response'] = 0;
-                } else {
-                    $site['status'] = 'down';
-                    $site['response'] = 0;
-                }
+            switch ($website->type) {
+                case 'website':
+                    $response = $this->checkWebsite($website->url);
+                    if ($response) {
+                        $site['status'] = 'online';
+                        $site['response'] = $response;
+                    } else {
+                        $site['status'] = 'down';
+                        $site['response'] = 0;
+                    }
+                    break;
+
+                case 'redis':
+                    $response = $this->checkRedis($website->url, $website->password);
+                    if ($response) {
+                        $site['status'] = 'online';
+                        $site['response'] = number_format($response, 3);
+                    } else {
+                        $site['status'] = 'down';
+                        $site['response'] = 0;
+                    }
+                    break;
+
+                case 'mysql':
+                    $response = $this->checkMysql($website->url, $website->username, $website->password, $website->db_name, $website->table_name);
+                    if ($response) {
+                        $site['status'] = 'online';
+                        $site['response'] = number_format($response, 3);
+                    } else {
+                        $site['status'] = 'down';
+                        $site['response'] = 0;
+                    }
+                    break;
             }
+
 			$sites[] = $site;
     	}
 
@@ -49,7 +65,6 @@ class WebsiteController extends Controller
 
     public function create()
     {
-
     	return view('websites.create');
     }
 
@@ -59,13 +74,15 @@ class WebsiteController extends Controller
             'url' => 'required|unique:websites',
             'name' => 'required',
 	        'type' => 'required',
+            'username' => 'required_if:type,mysql',
+            'password' => 'required_if:type,mysql,redis',
+            'db_name' => 'required_if:type,mysql',
+            'table_name' => 'required_if:type,mysql',
         ]);
 
-        $website = Website::create([
-            'url' => $request->input('url'),
-            'name' => $request->input('name'),
-        	'type' => $request->input('type')
-        ]);
+        $data = $request->all();
+
+        $website = Website::create($data);
 
         return redirect('/websites');
     }
@@ -83,18 +100,18 @@ class WebsiteController extends Controller
     	return redirect('/websites');
     }
 
-    public function checkRedis($url)
+    public function checkRedis($url, $password)
     {
         try {
-            // $starttime = microtime(true);
+            $starttime = microtime(true);
 
-            $client = new Client($url);
+            $client = new Client($url .'?Auth='. $password);
             $client->set('foo', 'bar');
             $value = $client->get('foo');
-            return true;
 
-            // $endtime = microtime(true);
-            // $timediff = $endtime - $starttime;
+            $endtime = microtime(true);
+            $timediff = $endtime - $starttime;
+            return $timediff * 1000;
         } catch (Exception $e) {
             return false;
         }
@@ -118,6 +135,29 @@ class WebsiteController extends Controller
             return false;
         }
         
+    }
+
+    public function checkMysql($servername, $username, $password, $db_name, $table_name)
+    {
+        try {
+                $time = microtime(true);
+                $conn = new PDO("mysql:host=$servername;dbname=$db_name", $username, $password);
+                // set the PDO error mode to exception
+                $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $stmt = $conn->prepare("SELECT id FROM $table_name limit 1"); 
+                $stmt->execute();
+
+                // set the resulting array to associative
+                $result = $stmt->setFetchMode(PDO::FETCH_ASSOC);
+                $diff = microtime(true)-$time;
+                $milliseconds =  $diff * 1000;
+                return $milliseconds;
+            }
+        catch(PDOException $e)
+            {
+                die($e->getMessage());
+                return false;
+            }
     }
 
 }
