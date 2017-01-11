@@ -43,6 +43,8 @@ class WebsiteController extends Controller
             }
 			$sites[] = $site;
     	}
+	
+	$sites = collect($sites)->sortBy('name');
 
     	return view('websites.index')->with('sites', $sites);
     }
