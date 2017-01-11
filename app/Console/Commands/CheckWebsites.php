@@ -54,12 +54,13 @@ class CheckWebsites extends Command
             switch ($website->type) {
                 case 'website':
                     $response = $this->checkWebsite($website->url);
-                    if ($response) {
+                    if (count($response)) {
                         $site['status'] = 'online';
-                        $site['response'] = $response;
+                        $site['response_time'] = $response[0];
                     } else {
                         $site['status'] = 'down';
-                        $site['response'] = 0;
+                        $site['response_time'] = 0;
+                        $site['response'] = $response[1];
 
                         $user = User::first();
                         $user->notify(new ServerDown($site['name']));
@@ -70,10 +71,10 @@ class CheckWebsites extends Command
                     $response = $this->checkRedis($website->url, $website->password);
                     if ($response) {
                         $site['status'] = 'online';
-                        $site['response'] = number_format($response, 3);
+                        $site['response_time'] = number_format($response, 3);
                     } else {
                         $site['status'] = 'down';
-                        $site['response'] = 0;
+                        $site['response_time'] = 0;
 
                         $user = User::first();
                         $user->notify(new ServerDown($site['name']));
@@ -84,10 +85,10 @@ class CheckWebsites extends Command
                     $response = $this->checkMysql($website->url, $website->username, $website->password, $website->db_name, $website->table_name);
                     if ($response) {
                         $site['status'] = 'online';
-                        $site['response'] = number_format($response, 3);
+                        $site['response_time'] = number_format($response, 3);
                     } else {
                         $site['status'] = 'down';
-                        $site['response'] = 0;
+                        $site['response_time'] = 0;
 
                         $user = User::first();
                         $user->notify(new ServerDown($site['name']));
@@ -129,7 +130,7 @@ class CheckWebsites extends Command
         curl_close($ch);
         if($httpcode == 200)
         {
-            return $info['total_time'];
+            return [$info['total_time'], $output];
         } else {
             return false;
         }
