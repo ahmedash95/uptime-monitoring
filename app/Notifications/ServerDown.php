@@ -13,14 +13,18 @@ class ServerDown extends Notification
     use Queueable;
 
     protected $name;
+    protected $url;
+    protected $message;
     /**
      * Create a new notification instance.
      *
      * @return void
      */
-    public function __construct($name)
+    public function __construct($name, $url = null, $message = null)
     {
         $this->name = $name;
+        $this->url = $url;
+        $this->message = $message;
     }
 
     /**
@@ -36,8 +40,21 @@ class ServerDown extends Notification
 
     public function toSlack($notifiable)
     {
-        return (new SlackMessage)
-            ->success()
-            ->content('server: '. $this->name .' is down');
+        $url = $this->url;
+        $message = $this->message;
+
+        if (is_null($url)) {
+            return (new SlackMessage)
+                ->success()
+                ->content('server: '. $this->name .' is down');
+        } else {
+            return (new SlackMessage)
+                ->success()
+                ->content('server: '. $this->name .' is down')
+                ->attachment(function ($attachment) use ($url, $message) {
+                    $attachment->title('Response', $url)
+                   ->content($message);
+                });
+        }
     }
 }

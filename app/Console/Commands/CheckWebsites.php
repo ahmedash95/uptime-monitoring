@@ -54,7 +54,7 @@ class CheckWebsites extends Command
             switch ($website->type) {
                 case 'website':
                     $response = $this->checkWebsite($website->url);
-                    if (count($response)) {
+                    if ($response[0]) {
                         $site['status'] = 'online';
                         $site['response_time'] = $response[0];
                     } else {
@@ -63,7 +63,7 @@ class CheckWebsites extends Command
                         $site['response'] = $response[1];
 
                         $user = User::first();
-                        $user->notify(new ServerDown($site['name']));
+                        $user->notify(new ServerDown($site['name'],$site['url'] ,$site['response'] = $response[1]));
                     }
                     break;
 
